@@ -34,9 +34,20 @@
 			line-height: 1.5;
 			font-family: Aldrich;
 		}
+		.plane-icon {
+			position: absolute;
+			/* transform: rotate(1.36rad); */
+			left: calc(50% - 25px);
+			top: calc(50% - 25px);
+			z-index: 2;
+			-webkit-transition: -webkit-transform .8s ease-in-out;
+			-ms-transition: -ms-transform .8s ease-in-out;
+			transition: transform .8s ease-in-out;  
+		}
     </style>
   </head>
   <body>
+	<div class="plane-icon"><img width="100px" src="/images/plane_icon.png"/></div>
 	<div class="eta"></div>
     <div id="map"></div>
 	  <script src="/js/jquery.min.js"></script>
@@ -255,6 +266,7 @@
 						// x is the opposite angle
 						bearing_from_origin = Math.atan(distance.y/distance.x);
 					}
+					$(".plane-icon").css('transform', 'rotate(' + bearing_from_origin + 'rad)');
 					console.log('bearing_from_origin', bearing_from_origin);
 					console.log('distance', distance);
 					
@@ -294,6 +306,7 @@
 						if (Math.abs(current_lat - end_airport_latlng.lat) < arrival_tolerance && Math.abs(current_lng - end_airport_latlng.lng) < arrival_tolerance) {
 							clearInterval(fly);
 							map.setCenter(new google.maps.LatLng(end_airport_latlng.lat, end_airport_latlng.lng));
+							$(".plane-icon").css('transform', 'rotate(0rad)');
 							$(".eta").text('Welcome to ' + end_airport);
 							console.log('arrived');
 						}
