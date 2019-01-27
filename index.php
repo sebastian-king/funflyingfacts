@@ -54,7 +54,7 @@
 		var start_airport_latlng;
 		var end_airport_latlng;
 		
-		var movement_step = 2;
+		var movement_step = 1;
 		var arrival_tolerance = movement_step * 2;
 		var time_interval = 1000; // ms
 		var info_window_limit = 5;
@@ -76,7 +76,7 @@
 		function display_visible_cities() {
 			for (marker in markers) {
 				if (map.getBounds().contains(markers[marker].getPosition(markers[marker])) && typeof info_windows[marker] === 'undefined') {
-					info_windows[marker] = make_info_window(markers[marker].title);
+					info_windows[marker] = make_info_window(markers[marker].aa_info);
 					//info_windows[marker].open(map, markers[marker]);
 				} else if (!map.getBounds().contains(markers[marker].getPosition(markers[marker])) && typeof info_windows[marker] !== 'undefined') {
 					//console.log('delete', info_windows[marker]);
@@ -166,15 +166,28 @@
 		  
 		function make_info_window(content) {
 			//google.maps.InfoWindow.prototype.opened = false;
-			var hash = $.md5(content[0] + content[1]);
-			$.get('https://en.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro&explaintext&redirects=1&origin=*&titles=' + encodeURIComponent(content[0]), function(data) {
-				var result = data.query.pages[Object.keys(data.query.pages)[0]].extract;
-				console.log(result);
-				if (document.getElementById(hash)) {
-					document.getElementById(hash).innerHTML = result;
+			if (content[2] == "US" || content[2] == "GB") {
+				content[2] = "";
+			} else {
+				content[2] = ', ' + content[2];
+			}
+			var hash = $.md5(content[0] + content[1] + content[2]);
+			$.get('https://en.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro&explaintext&redirects=1&origin=*&titles=' + encodeURIComponent(content[0] + ((content[1]) ? ', ' + content[1] : content[2])), function(data) {
+				try {
+					var result = data.query.pages[Object.keys(data.query.pages)[0]].extract;
+				} catch (err) {
+					// do nothing
+				}
+				var name = content[0] + ', ' + ((content[1]) ? content[1] : content[2]).replace(', ', '');
+				if (typeof result == 'undefined') {
+					result = '<em>No information found for <strong>' + content[0] + ', ' + name + '</strong>.</em>'
+				} else {
+					if (document.getElementById(hash)) {
+						document.getElementById(hash).innerHTML = '<strong>' + name + '</strong><br>' + result;
+					}
 				}
 			});
-			var info_window = new google.maps.InfoWindow({ content: '<div id="' + hash + '"></div>', disableAutoPan: true });
+			var info_window = new google.maps.InfoWindow({ content: '<div id="' + hash + '"><img width="50px" src="https://www.shopthemarketplace.com/images/spinner.gif"/></div>', disableAutoPan: true });
 			info_window.opened = false;
 			
 			return info_window;
@@ -200,8 +213,10 @@
 				});
 				
 				google.maps.InfoWindow.prototype.opened = false;
+				google.maps.Marker.prototype.aa_info = false;
 				
 				google.maps.event.addListenerOnce(map, 'idle', function() {
+					var i = 0;
 					for (airport in data) {
 						if (data[airport].code == start_airport) {
 							map.setCenter(new google.maps.LatLng(data[airport].latitude, data[airport].longitude));
@@ -214,10 +229,14 @@
 						}
 						
 						var marker = new google.maps.Marker({ position: {lat: data[airport].latitude, lng: data[airport].longitude}, map: map, title: data[airport].city });
+						marker.aa_info = [data[airport].city, data[airport].stateCode, data[airport].countryCode];
 						markers.push(marker);
 						if (map.getBounds().contains(marker.getPosition(marker))) {
-							info_windows[markers.length-1] = make_info_window([data[airport].city, data[airport].countryName]);
-							open_info_window(info_windows[markers.length-1], map, marker);
+							if (i < info_window_limit) {
+								info_windows[markers.length-1] = make_info_window(marker.aa_info);
+								open_info_window(info_windows[markers.length-1], map, marker);
+								i++;
+							}
 						}
 					}
 					
@@ -266,7 +285,7 @@
 						}
 										  
 						var ETA = steps * time_interval / 1000; // s
-						$(".eta").html('Remaining: <strong>' + Math.floor(ETA / 60) + ' m ' + Math.round(ETA - Math.round(ETA / 60)) + ' s</strong>');
+						$(".eta").html('Remaining:<br><strong>' + Math.floor(ETA / 60) + ' m ' + Math.round(ETA - Math.round(ETA / 60)) + ' s</strong>');
 						
 						map.setCenter(new google.maps.LatLng(current_lat, current_lng));
 						
