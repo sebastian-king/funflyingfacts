@@ -22,16 +22,17 @@
 		}
 		.eta {
 			position: absolute;
-			width: 100px;
+			width: 200px;
 			top: 10px;
 			z-index: 1;
-			height: 50px;
+			height: 100px;
 			background-color: #b5b4b4;
-			left: calc(50% - 50px);
+			left: calc(50% - 100px);
 			border-radius: 10px;
 			border: 2px solid whitesmoke;
 			text-align: center;
 			line-height: 1.5;
+			font-size: 33px;
 			font-family: Aldrich;
 		}
 		.plane-icon {
@@ -65,7 +66,7 @@
 		var start_airport_latlng;
 		var end_airport_latlng;
 		
-		var movement_step = 1;
+		var movement_step = 2;
 		var arrival_tolerance = movement_step * 2;
 		var time_interval = 1000; // ms
 		var info_window_limit = 5;
@@ -183,18 +184,22 @@
 				content[2] = ', ' + content[2];
 			}
 			var hash = $.md5(content[0] + content[1] + content[2]);
-			$.get('https://en.wikipedia.org/w/api.php?format=json&action=query&prop=extracts&exintro&explaintext&redirects=1&origin=*&titles=' + encodeURIComponent(content[0] + ((content[1]) ? ', ' + content[1] : content[2])), function(data) {
+			$.get('/api/all2.php?q=' + encodeURIComponent(content[0] + ((content[1]) ? ', ' + content[1] : content[2])), function(data) {
+				var result = "";
+				var temp = "";
 				try {
-					var result = data.query.pages[Object.keys(data.query.pages)[0]].extract;
+					temp = data[0];
+					result = data[1];
 				} catch (err) {
 					// do nothing
+					conole.log(err);
 				}
 				var name = content[0] + ', ' + ((content[1]) ? content[1] : content[2]).replace(', ', '');
-				if (typeof result == 'undefined') {
+				if (typeof result == 'undefined' || !result) {
 					result = '<em>No information found for <strong>' + content[0] + ', ' + name + '</strong>.</em>'
 				} else {
 					if (document.getElementById(hash)) {
-						document.getElementById(hash).innerHTML = '<strong>' + name + '</strong><br>' + result;
+						document.getElementById(hash).innerHTML = '<strong>' + name + ' (' + Math.round(temp, 2) + ' F)</strong><br>' + result;
 					}
 				}
 			});
