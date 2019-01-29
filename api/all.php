@@ -39,4 +39,4 @@ if (preg_match('/^.{1,150}\b/s', current($extract->query->pages)->extract, $matc
 }
 
 header('Content-Type: application/json');
-echo json_encode(array($temperature_f, $summary, $q, $_GET['hash']));
+echo json_encode(array($temperature_f, $summary, 0, $_GET['hash']));
