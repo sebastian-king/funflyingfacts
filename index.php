@@ -1,4 +1,6 @@
-<!DOCTYPE html>
+<?php
+require('config.php');
+?><!DOCTYPE html>
 <html>
   <head>
     <title>Fun Flying Facts</title>
@@ -66,11 +68,11 @@
 		var start_airport_latlng;
 		var end_airport_latlng;
 		
-		var movement_step = 2;
+		var movement_step = 4;
 		var arrival_tolerance = movement_step * 2;
 		var time_interval = 1000; // ms
 		var info_window_limit = 5;
-		
+
 		function shuffle_array(array) { // by ref
 			for (var i = array.length - 1; i > 0; i--) {
 				var j = Math.floor(Math.random() * (i + 1));
@@ -178,42 +180,87 @@
 		  
 		function make_info_window(content) {
 			//google.maps.InfoWindow.prototype.opened = false;
+			/*var _content = [content[0], content[1], content[2]];
 			if (content[2] == "US" || content[2] == "GB") {
 				content[2] = "";
 			} else {
 				content[2] = ', ' + content[2];
-			}
+			}*/
+			//console.log(content, _content);
 			var hash = $.md5(content[0] + content[1] + content[2]);
-			$.get('/api/all2.php?q=' + encodeURIComponent(content[0] + ((content[1]) ? ', ' + content[1] : content[2])), function(data) {
+			var info_window = new google.maps.InfoWindow({ content: '<div id="' + hash + '"><img width="50px" src="https://www.shopthemarketplace.com/images/spinner.gif"/></div>', disableAutoPan: true });
+                        info_window.opened = false;
+			info_window.hash = hash;
+			info_window.content = content;
+			/*
+			setTimeout(function() {
+			$.get('/api/all.php?city=' + encodeURIComponent(content[0]) + "&state=" + encodeURIComponent(content[1]) + "&country_code=" + encodeURIComponent(_content[2]) + "&hash=" + hash, function(data) {
 				var result = "";
 				var temp = "";
+				var hash = data[3];
 				try {
 					temp = data[0];
 					result = data[1];
+					console.log(hash, 'success', content);
 				} catch (err) {
 					// do nothing
 					conole.log(err);
 				}
+				//console.log(data);
 				var name = content[0] + ', ' + ((content[1]) ? content[1] : content[2]).replace(', ', '');
 				if (typeof result == 'undefined' || !result) {
 					result = '<em>No information found for <strong>' + content[0] + ', ' + name + '</strong>.</em>'
 				} else {
 					if (document.getElementById(hash)) {
 						document.getElementById(hash).innerHTML = '<strong>' + name + ' (' + Math.round(temp, 2) + ' F)</strong><br>' + result;
+					} else {
+						console.log('hash not found', hash, content, document.getElementById(hash), $("#" + hash).length);
 					}
 				}
 			});
-			var info_window = new google.maps.InfoWindow({ content: '<div id="' + hash + '"><img width="50px" src="https://www.shopthemarketplace.com/images/spinner.gif"/></div>', disableAutoPan: true });
-			info_window.opened = false;
-			
+			}, 500);
+			*/
+			//var info_window = new google.maps.InfoWindow({ content: '<div id="' + hash + '"><img width="50px" src="https://www.shopthemarketplace.com/images/spinner.gif"/></div>', disableAutoPan: true });
+			//info_window.opened = false;
+
 			return info_window;
 		}
-		  
+
 		function open_info_window(info_window, map, marker) {
 			info_window.opened = true;
+
+			var content = info_window.content;
+			var hash = info_window.hash;
+
+			//setTimeout(function() {
+                        	$.get('/api/all.php?city=' + encodeURIComponent(content[0]) + "&state=" + encodeURIComponent(content[1]) + "&country_code=" + encodeURIComponent(content[2]) + "&hash=" + hash + "&lat=" + content[3] + "&lng=" + content[4], function(data) {
+					var result = "";
+                        	        var temp = "";
+                        	        var hash = data[3];
+                        	        try {
+                        	                temp = data[0];
+                        	                result = data[1];
+                        	                console.log('success, got info for ', content);
+                        	        } catch (err) {
+                        	                // do nothing
+                        	                conole.log(err);
+                        	        }
+                        	        //console.log(data);
+                        	        var name = content[0] + ', ' + ((content[1]) ? content[1] : content[2]).replace(', ', '');
+                        	        if (typeof result == 'undefined' || !result) {
+                        	                result = '<em>No information found.</em>'
+                        	        }
+                       	                if (document.getElementById(hash)) {
+                       	                        document.getElementById(hash).innerHTML = '<strong>' + name + ' (' + Math.round(temp, 2) + ' F)</strong><br>' + result;
+                       	                } else {
+                       	                        console.log('error, hash not found', hash);
+                       	                }
+                        	});
+                        //}, 500);
+
 			info_window.open(map, marker);
 		}
-		  
+
 		function close_info_window(info_window, map, marker) {
 			info_window.opened = false;
 			info_window.close();
@@ -227,10 +274,12 @@
 					zoom: 7,
 					mapTypeId: 'satellite'
 				});
-				
+
 				google.maps.InfoWindow.prototype.opened = false;
+				google.maps.InfoWindow.prototype.hash = null;
+				google.maps.InfoWindow.prototype.content = [];
 				google.maps.Marker.prototype.aa_info = false;
-				
+
 				google.maps.event.addListenerOnce(map, 'idle', function() {
 					var i = 0;
 					for (airport in data) {
@@ -245,7 +294,7 @@
 						}
 						
 						var marker = new google.maps.Marker({ position: {lat: data[airport].latitude, lng: data[airport].longitude}, map: map, title: data[airport].city });
-						marker.aa_info = [data[airport].city, data[airport].stateCode, data[airport].countryCode];
+						marker.aa_info = [data[airport].city, data[airport].stateCode, data[airport].countryCode, data[airport].latitude, data[airport].longitude];
 						markers.push(marker);
 						if (map.getBounds().contains(marker.getPosition(marker))) {
 							if (i < info_window_limit) {
@@ -302,14 +351,14 @@
 						}
 										  
 						var ETA = steps * time_interval / 1000; // s
-						$(".eta").html('Remaining:<br><strong>' + Math.floor(ETA / 60) + ' m ' + Math.round(ETA - Math.round(ETA / 60)) + ' s</strong>');
+						$(".eta").html('Remaining:<br><strong>' + Math.floor(ETA % 3600 / 60) + ' m ' + Math.floor(ETA % 3600 % 60) + ' s</strong>');
 						
 						map.setCenter(new google.maps.LatLng(current_lat, current_lng));
 						
 						console.log(current_lat, current_lng, ETA);
 						//clearInterval(fly);
 						if (Math.abs(current_lat - end_airport_latlng.lat) < arrival_tolerance && Math.abs(current_lng - end_airport_latlng.lng) < arrival_tolerance) {
-							clearInterval(fly);
+							//clearInterval(fly);
 							map.setCenter(new google.maps.LatLng(end_airport_latlng.lat, end_airport_latlng.lng));
 							$(".plane-icon").css('transform', 'rotate(0rad)');
 							$(".eta").text('Welcome to ' + end_airport);
@@ -326,7 +375,7 @@
 			});
 		}
 	  </script>
-	  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCmhCbzqr1vrx6mEXryjo3VsXbJDadsYXU&callback=initMap"
+	  <script src="https://maps.googleapis.com/maps/api/js?key=<?php echo GOOGLE_JAVASCRIPT_MAPS_API_KEY; ?>&callback=initMap"
     async defer></script>
   </body>
 </html>
