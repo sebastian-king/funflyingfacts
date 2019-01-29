@@ -68,7 +68,7 @@ require('config.php');
 		var start_airport_latlng;
 		var end_airport_latlng;
 		
-		var movement_step = 4;
+		var movement_step = 0.5;
 		var arrival_tolerance = movement_step * 2;
 		var time_interval = 1000; // ms
 		var info_window_limit = 5;
